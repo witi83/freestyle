@@ -45,7 +45,7 @@ class H2TodoItemRepositoryHandler extends TodoItemRepository.Handler[ConnectionI
     sql"""CREATE TABLE todo_items (id INT AUTO_INCREMENT PRIMARY KEY, item VARCHAR)""".update.run
 
   def get(id: Int) =
-    sql"""SELECT id, item FROM todo_items WHERE id = $id"""
+    sql"""SELECT item, id FROM todo_items WHERE id = $id"""
       .query[TodoItem]
       .option
 
@@ -53,7 +53,7 @@ class H2TodoItemRepositoryHandler extends TodoItemRepository.Handler[ConnectionI
     sql"""INSERT INTO todo_items (item) VALUES (${input.item})""".update.run
 
   def list =
-    sql"""SELECT id, item FROM todo_items ORDER BY id ASC"""
+    sql"""SELECT item, id FROM todo_items ORDER BY id ASC"""
       .query[TodoItem]
       .list
 

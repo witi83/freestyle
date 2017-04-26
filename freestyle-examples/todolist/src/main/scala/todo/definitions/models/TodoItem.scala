@@ -18,4 +18,4 @@ package todo
 package definitions
 package models
 
-case class TodoItem(id: Int, item: String)
+case class TodoItem(item: String, id: Option[Int] = None)

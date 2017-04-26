@@ -21,6 +21,8 @@ package apis
 import cats.~>
 import com.twitter.util.Future
 import io.finch._
+import io.finch.circe._
+import io.circe.generic.auto._
 import freestyle._
 import freestyle.implicits._
 import freestyle.http.finch._
@@ -30,7 +32,6 @@ import todo.definitions.persistence._
 import todo.runtime.implicits._
 
 class TodoItemApi[F[_]](implicit repo: TodoItemRepository[F], handler: F ~> Future) {
-
   val resetTodoItem: Endpoint[Int] =
     post("items" :: "reset") {
       repo.init.map(Ok(_))
@@ -48,13 +49,13 @@ class TodoItemApi[F[_]](implicit repo: TodoItemRepository[F], handler: F ~> Futu
     }
 
   val insertTodoItem: Endpoint[Int] =
-    post("items" :: param("item")) { item: String =>
-      repo.insert(TodoItem(0, item)).map(Ok(_))
+    post("items" :: jsonBody[TodoItem]) { item: TodoItem =>
+      repo.insert(item).map(Ok(_))
     }
 
   val updateTodoItem: Endpoint[Int] =
-    put("items" :: int :: param("item")) { (id: Int, item: String) =>
-      repo.update(TodoItem(id, item)).map(Ok(_))
+    put("items" :: int :: jsonBody[TodoItem]) { (id: Int, item: TodoItem) =>
+      repo.update(item.copy(id = Some(id))).map(Ok(_))
     }
 
   val deleteTodoItem: Endpoint[Int] =
