@@ -21,6 +21,7 @@ import cats.~>
 import com.twitter.util.{Future, Promise}
 import doobie.imports._
 import fs2.Task
+import fs2.interop.cats._
 import todo.definitions.persistence.{H2TodoItemRepositoryHandler, TodoItemRepository}
 import todo.definitions.TodoApp
 
@@ -28,6 +29,7 @@ import freestyle.implicits._
 import freestyle.doobie.implicits._
 
 import freestyle.logging._
+import freestyle.loggingJVM.implicits._
 
 object implicits {
 
@@ -54,22 +56,6 @@ object implicits {
 
   implicit val todoRepoTaskHandler: TodoItemRepository.Op ~> Task =
     todoRepositoryHandler andThen connectionIO2Task
-
-  implicit val loggingHandler = new LoggingM.Handler[Task] {
-    def generic(level: String, msg: String) = Task.now(println(s"$level: $msg"))
-
-    def debug(msg: String)                            = generic("DEBUG", msg)
-    def debugWithCause(msg: String, cause: Throwable) = debug(msg)
-
-    def error(msg: String)                            = generic("ERROR", msg)
-    def errorWithCause(msg: String, cause: Throwable) = error(msg)
-
-    def info(msg: String)                            = generic("INFO", msg)
-    def infoWithCause(msg: String, cause: Throwable) = info(msg)
-
-    def warn(msg: String)                            = generic("WARN", msg)
-    def warnWithCause(msg: String, cause: Throwable) = warn(msg)
-  }
 
   implicit val futureHandler: TodoApp.Op ~> Future =
     implicitly[TodoApp.Op ~> Task] andThen task2Future
