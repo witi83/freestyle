@@ -20,15 +20,34 @@ package apis
 
 import todo.definitions.models.Pong
 import io.finch._
+import io.finch.circe._
+import io.circe.generic.auto._
+import freestyle._
+import freestyle.implicits._
+import freestyle.http.finch._
+import freestyle.logging._
 
-class GenericApi {
+import todo.runtime.implicits._
+
+class GenericApi[F[_]](implicit log: LoggingM[F]) {
+
   val ping: Endpoint[Pong] =
     get("ping") {
-      Ok(Pong.current)
+      for {
+        _ <- log.error("Not really an error")
+        _ <- log.warn("Not really a warn")
+        _ <- log.debug("GET /ping")
+      } yield Ok(Pong.current)
     }
 
   val hello: Endpoint[String] =
     get("hello") {
+      for {
+        _ <- log.error("Not really an error")
+        _ <- log.warn("Not really a warn")
+        _ <- log.debug("GET /Hello")
+      } yield ()
+
       Ok("Hello World")
     }
 
@@ -36,5 +55,5 @@ class GenericApi {
 }
 
 object GenericApi {
-  implicit def instance: GenericApi = new GenericApi
+  implicit def instance[F[_]](implicit log: LoggingM[F]): GenericApi[F] = new GenericApi
 }

@@ -18,11 +18,11 @@ package todo
 package http
 package apis
 
-class Api[F[_]](implicit genericApi: GenericApi, todoItemApi: TodoItemApi[F]) {
+class Api[F[_]](implicit genericApi: GenericApi[F], todoItemApi: TodoItemApi[F]) {
   val endpoints = genericApi.endpoints :+: todoItemApi.endpoints
 }
 
 object Api {
-  implicit def instance[F[_]](implicit genericApi: GenericApi, todoItemApi: TodoItemApi[F]) =
+  implicit def instance[F[_]](implicit genericApi: GenericApi[F], todoItemApi: TodoItemApi[F]) =
     new Api[F]
 }
