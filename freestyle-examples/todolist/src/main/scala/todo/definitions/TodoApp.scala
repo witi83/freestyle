@@ -21,6 +21,6 @@ import freestyle._
 import persistence.Persistence
 
 @module
-trait TodoApp[F[_]] {
-  val persistence: Persistence[F]
+trait TodoApp {
+  val persistence: Persistence
 }

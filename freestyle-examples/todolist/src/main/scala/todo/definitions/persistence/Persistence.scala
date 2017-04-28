@@ -22,7 +22,7 @@ import freestyle._
 import freestyle.doobie._
 
 @module
-trait Persistence[F[_]] {
-  val todoItemRepository: TodoItemRepository[F]
-  val doobieM: DoobieM[F]
+trait Persistence {
+  val todoItemRepository: TodoItemRepository
+  val doobieM: DoobieM
 }
