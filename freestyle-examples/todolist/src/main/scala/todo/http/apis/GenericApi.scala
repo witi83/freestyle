@@ -18,6 +18,8 @@ package todo
 package http
 package apis
 
+import cats.~>
+import com.twitter.util.Future
 import todo.definitions.models.Pong
 import io.finch._
 import io.finch.circe._
@@ -26,10 +28,9 @@ import freestyle._
 import freestyle.implicits._
 import freestyle.http.finch._
 import freestyle.logging._
-
 import todo.runtime.implicits._
 
-class GenericApi[F[_]](implicit log: LoggingM[F]) {
+class GenericApi[F[_]](implicit log: LoggingM[F], handler: F ~> Future) {
 
   val ping: Endpoint[Pong] =
     get("ping") {
@@ -46,14 +47,13 @@ class GenericApi[F[_]](implicit log: LoggingM[F]) {
         _ <- log.error("Not really an error")
         _ <- log.warn("Not really a warn")
         _ <- log.debug("GET /Hello")
-      } yield ()
-
-      Ok("Hello World")
+      } yield Ok("Hello World")
     }
 
   val endpoints = hello :+: ping
 }
 
 object GenericApi {
-  implicit def instance[F[_]](implicit log: LoggingM[F]): GenericApi[F] = new GenericApi
+  implicit def instance[F[_]](implicit log: LoggingM[F], handler: F ~> Future): GenericApi[F] =
+    new GenericApi
 }
