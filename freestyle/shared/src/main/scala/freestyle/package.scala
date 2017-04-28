@@ -72,6 +72,19 @@ package object freestyle {
   }
 
   /**
+    * Syntax functions for Free
+    */
+  implicit class FreeOps[F[_], A](private val fa: Free[F, A]) extends AnyVal {
+
+    /**
+      * Runs a seq/par program by converting each parallel fragment in `f` into an `H`
+      * `H` should probably be an `IO`/`Task` like `Monad` also providing parallel execution.
+      */
+    def exec[H[_]: Monad](implicit interpreter: FSHandler[F, H]): H[A] =
+      fa.foldMap(interpreter)
+  }
+
+  /**
    * Syntax functions for FreeS.Par
    */
   implicit class FreeSOps[F[_], A](private val fa: FreeS[F, A]) extends AnyVal {
@@ -91,8 +104,17 @@ package object freestyle {
      * Runs a seq/par program by converting each parallel fragment in `f` into an `H`
      * `H` should probably be an `IO`/`Task` like `Monad` also providing parallel execution.
      */
-    def exec[H[_]: Monad](implicit interpreter: ParInterpreter[F, H]): H[A] =
+    def parExec[H[_]: Monad](implicit interpreter: ParInterpreter[F, H]): H[A] =
       fa.foldMap(interpreter)
+
+    /**
+     * Runs a seq/par program by converting each parallel fragment in `f` into an `H`
+     * `H` should probably be an `IO`/`Task` like `Monad` also providing parallel execution.
+     */
+    def exec[H[_]: Monad](implicit handler: FSHandler[F, H]): H[A] = {
+      val parInterpreter = λ[FSHandler[FreeApplicative[F, ?], H]](_.foldMap(handler))
+      fa.foldMap(parInterpreter)
+    }
   }
 
   /**
@@ -109,22 +131,11 @@ package object freestyle {
       fa.foldMap(handler)
   }
 
-  /**
-   * Syntax functions for any F[A]
-   */
-  implicit class ParLift[F[_], A](private val fa: F[A]) extends AnyVal {
-
-    /**
-     * Lift an F[A] into a FreeS[F, A]
-     */
-    def freeS: FreeS[F, A] = FreeS.liftFA(fa)
-  }
-
   implicit class FreeSLiftSyntax[G[_], A](ga: G[A]) {
     def liftFS[F[_]](implicit L: FreeSLift[F, G]): FreeS[F, A]        = L.liftFS(ga)
     def liftFSPar[F[_]](implicit L: FreeSLift[F, G]): FreeS.Par[F, A] = L.liftFSPar(ga)
   }
 
-  implicit def freeSPar2Seq[F[_], A](fa: FreeS.Par[F, A]): FreeS[F, A] = fa.freeS
+  implicit def freeSPar2Seq[F[_], A](fa: FreeS.Par[F, A]): FreeS[F, A] = FreeS.liftPar(fa)
 
 }

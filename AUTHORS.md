@@ -11,10 +11,12 @@ The maintainers of the project are:
 These are the people that have contributed to the Freestyle project:
 
 * [colin-passiv](https://github.com/colin-passiv)
+* Adrián Ramírez Fornell <[AdrianRaFo](https://github.com/AdrianRaFo)>
 * Alejandro Gómez <[dialelo](https://github.com/dialelo)>
 * Ana Mª Marquez <[anamariamv](https://github.com/anamariamv)>
 * Diego Esteban Alonso Blas <[diesalbla](https://github.com/diesalbla)>
 * Domingo Valera <[dominv](https://github.com/dominv)>
+* Fede Fernández <[fedefernandez](https://github.com/fedefernandez)>
 * Francisco Diaz <[franciscodr](https://github.com/franciscodr)>
 * Giovanni Ruggiero <[gruggiero](https://github.com/gruggiero)>
 * Javi Pacheco <[javipacheco](https://github.com/javipacheco)>

@@ -18,6 +18,9 @@ options:
      - title: Modules
        url: docs/core/modules/
 
+     - title: Tagless Final
+       url: docs/core/tagless/
+
   - title: Effects
     url: docs/effects/
 
@@ -82,7 +85,7 @@ options:
         url: docs/integrations/play
 
       - title: Monix
-        url: TODO.html
+        url: docs/integrations/monix
 
       - title: Fetch
         url: docs/integrations/fetch

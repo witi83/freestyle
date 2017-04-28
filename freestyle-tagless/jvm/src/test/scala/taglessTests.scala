@@ -14,28 +14,29 @@
  * limitations under the License.
  */
 
-package freestyle
-
-import cats.arrow.FunctionK
-import cats.Eval
+import freestyle._
+import freestyle.implicits._
 import org.scalatest.{Matchers, WordSpec}
+import cats._
+import cats.implicits._
+import algebras._
+import cats.free.Free
+import handlers._
+import modules._
+import utils._
 
-class liftTests extends WordSpec with Matchers {
+class taglessTestsJVM extends WordSpec with Matchers {
 
-  "Lifting syntax" should {
+  "Tagless final algebras" should {
 
-    "allow any value to be lifted into a FreeS monadic context" in {
-      import cats.implicits._
-      import freestyle.implicits._
+    "blow up the stack when interpreted to stack unsafe monads" in {
+      assertThrows[StackOverflowError] {
+        SOProgram[Option](0)
+      }
+    }
 
-      def program[F[_]] =
-        for {
-          a <- Eval.now(1).freeS
-          b <- 2.pure[Eval].freeS
-          c <- 3.pure[Eval].freeS
-        } yield a + b + c
-      implicit val interpreter = FunctionK.id[Eval]
-      program[Eval].exec[Eval].value shouldBe 6
+    "remain stack safe when interpreted to stack safe monads" in {
+      SOProgram[Free[Option, ?]](0).exec[Option] shouldBe Option(iterations)
     }
 
   }
