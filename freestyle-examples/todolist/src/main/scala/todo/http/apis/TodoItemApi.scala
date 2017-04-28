@@ -26,41 +26,68 @@ import io.circe.generic.auto._
 import freestyle._
 import freestyle.implicits._
 import freestyle.http.finch._
+import freestyle.logging._
 
 import todo.definitions.models.TodoItem
 import todo.definitions.persistence._
 import todo.runtime.implicits._
 
-class TodoItemApi[F[_]](implicit repo: TodoItemRepository[F], handler: F ~> Future) {
+class TodoItemApi[F[_]](
+    implicit repo: TodoItemRepository[F],
+    log: LoggingM[F],
+    handler: F ~> Future) {
   val resetTodoItem: Endpoint[Int] =
     post("items" :: "reset") {
-      repo.init.map(Ok(_))
+      for {
+        _ <- log.debug("Trying to reset TodoItem in repository")
+        r <- repo.init
+        _ <- log.warn("POST /items/reset: Initialize the TodoItem table")
+      } yield Ok(r)
     }
 
-  // val getTodoItem: Endpoint[Option[TodoItem]] =
   val getTodoItem: Endpoint[TodoItem] =
     get("items" :: int) { id: Int =>
-      repo.get(id).map(_.fold[Output[TodoItem]](NotFound(new NoSuchElementException))(Ok(_)))
+      for {
+        _    <- log.debug("Trying to retrieve an TodoItem")
+        item <- repo.get(id)
+        _    <- log.info(s"GET /items/$id: Found $item")
+      } yield item.fold[Output[TodoItem]](NotFound(new NoSuchElementException))(Ok(_))
     }
 
   val getTodoItems: Endpoint[List[TodoItem]] =
     get("items") {
-      repo.list.map(Ok(_))
+      for {
+        _     <- log.debug("Trying to get all TodoItems")
+        items <- repo.list
+        _     <- log.info(s"GET /items: Found all the TodoItems")
+      } yield Ok(items)
     }
 
   val insertTodoItem: Endpoint[Int] =
     post("items" :: jsonBody[TodoItem]) { item: TodoItem =>
-      repo.insert(item).map(Ok(_))
+      for {
+        _ <- log.debug("Trying to insert a TodoItem")
+        r <- repo.insert(item)
+        _ <- log.info(s"POST /items with $item: Tried to add TodoItem")
+      } yield Ok(r)
     }
 
   val updateTodoItem: Endpoint[Int] =
     put("items" :: int :: jsonBody[TodoItem]) { (id: Int, item: TodoItem) =>
-      repo.update(item.copy(id = Some(id))).map(Ok(_))
+      for {
+        _ <- log.debug("Trying to update a TodoItem")
+        r <- repo.update(item.copy(id = Some(id)))
+        _ <- log.info(s"PUT /items/$id with $item: Tried to update TodoItem")
+      } yield Ok(r)
     }
 
   val deleteTodoItem: Endpoint[Int] =
     delete("items" :: int) { id: Int =>
-      repo.delete(id).map(Ok(_))
+      for {
+        _ <- log.debug("Trying to delete a TodoItem")
+        r <- repo.delete(id)
+        _ <- log.info("DELETE /items/$id: Tried to delete TodoItem")
+      } yield Ok(r)
     }
 
   val endpoints = resetTodoItem :+: getTodoItem :+: getTodoItems :+: insertTodoItem :+: updateTodoItem :+: deleteTodoItem
@@ -69,6 +96,7 @@ class TodoItemApi[F[_]](implicit repo: TodoItemRepository[F], handler: F ~> Futu
 object TodoItemApi {
   implicit def instance[F[_]](
       implicit repo: TodoItemRepository[F],
+      log: LoggingM[F],
       handler: F ~> Future): TodoItemApi[F] =
     new TodoItemApi[F]
 }
