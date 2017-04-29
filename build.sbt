@@ -280,6 +280,7 @@ lazy val todolistExample = (project in file("freestyle-examples/todolist"))
   .dependsOn(httpFinch)
   .dependsOn(fs2JVM)
   .dependsOn(loggingJVM)
+  .dependsOn(config)
   .settings(name := "freestyle-examples-todolist")
   .settings(noPublishSettings)
   .settings(

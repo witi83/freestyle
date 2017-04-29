@@ -31,6 +31,9 @@ import freestyle.doobie.implicits._
 import freestyle.logging._
 import freestyle.loggingJVM.implicits._
 
+import freestyle.config._
+import freestyle.config.implicits._
+
 object implicits {
 
   implicit val xa = DriverManagerTransactor[Task](

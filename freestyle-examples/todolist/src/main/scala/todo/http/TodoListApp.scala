@@ -17,6 +17,9 @@
 package todo
 package http
 
+import cats._
+import cats.implicits._
+
 import com.twitter.finagle.{Http, Service}
 import com.twitter.finagle.http.{Request, Response}
 import com.twitter.server.TwitterServer
@@ -26,20 +29,51 @@ import io.finch.circe._
 
 import todo.definitions.TodoApp
 import todo.http.apis.Api
+
+import fs2.Task
+import fs2.interop.cats._
+
+import freestyle._
+import freestyle.implicits._
+
+// I don't like this
+import _root_.doobie.imports._
+import freestyle.doobie.implicits._
+
+import freestyle.logging._
+import freestyle.loggingJVM.implicits._
+
+import freestyle.config._
+import freestyle.config.implicits._
+// I don't like this
+
 import todo.runtime.implicits._
 
 object TodoListApp extends TwitterServer {
 
   val service: Service[Request, Response] = Api.instance[TodoApp.Op].endpoints.toService
 
+  def getAddress[F[_]](implicit app: TodoApp[F]): FreeS[F, String] =
+    for {
+      _      <- app.log.warn("Trying to load application.conf")
+      config <- app.config.load
+      host = config.string("http.host").getOrElse("localhost")
+      port = config.int("http.port").getOrElse("8080")
+      _ <- app.log.debug(s"Host: $host")
+      _ <- app.log.debug(s"Port: $port")
+    } yield s"$host:$port"
+
   def main(): Unit = {
+    val address = getAddress[TodoApp.Op].exec[Task].unsafeRun()
+
     val server = Http.server.withAdmissionControl
       .concurrencyLimit(maxConcurrentRequests = 10, maxWaiters = 10)
-      .serve(":8081", service)
+      .serve(address, service)
 
     onExit { server.close() }
 
     Await.ready(server)
+
   }
 
 }

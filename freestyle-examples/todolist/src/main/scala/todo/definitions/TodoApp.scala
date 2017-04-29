@@ -20,9 +20,11 @@ package definitions
 import freestyle._
 import persistence.Persistence
 import freestyle.logging._
+import freestyle.config._
 
 @module
 trait TodoApp {
   val persistence: Persistence
   val log: LoggingM
+  val config: ConfigM
 }
