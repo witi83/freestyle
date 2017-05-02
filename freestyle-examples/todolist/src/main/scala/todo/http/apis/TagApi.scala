@@ -28,75 +28,72 @@ import freestyle.implicits._
 import freestyle.http.finch._
 import freestyle.logging._
 
-import todo.definitions.models.TodoItem
+import todo.definitions.models.Tag
 import todo.definitions.persistence._
 import todo.runtime.implicits._
 
-class TodoItemApi[F[_]](
-    implicit repo: TodoItemRepository[F],
-    log: LoggingM[F],
-    handler: F ~> Future) {
+class TagApi[F[_]](implicit repo: TagRepository[F], log: LoggingM[F], handler: F ~> Future) {
   val reset: Endpoint[Int] =
-    post("items" :: "reset") {
+    post("tags" :: "reset") {
       for {
-        _ <- log.debug("Trying to reset TodoItem in repository")
+        _ <- log.debug("Trying to reset Tag in repository")
         r <- repo.init
-        _ <- log.warn("POST /items/reset: Initialize the TodoItem table")
+        _ <- log.warn("POST /tags/reset: Initialize the Tag table")
       } yield Ok(r)
     }
 
-  val retrieve: Endpoint[TodoItem] =
-    get("items" :: int) { id: Int =>
+  val retrieve: Endpoint[Tag] =
+    get("tags" :: int) { id: Int =>
       for {
-        _    <- log.debug("Trying to retrieve an TodoItem")
+        _    <- log.debug("Trying to retrieve an Tag")
         item <- repo.get(id)
-        _    <- log.info(s"GET /items/$id: Found $item")
-      } yield item.fold[Output[TodoItem]](NotFound(new NoSuchElementException))(Ok(_))
+        _    <- log.info(s"GET /tags/$id: Found $item")
+      } yield item.fold[Output[Tag]](NotFound(new NoSuchElementException))(Ok(_))
     }
 
-  val list: Endpoint[List[TodoItem]] =
-    get("items") {
+  val list: Endpoint[List[Tag]] =
+    get("tags") {
       for {
-        _     <- log.debug("Trying to get all TodoItems")
+        _     <- log.debug("Trying to get all Tags")
         items <- repo.list
-        _     <- log.info(s"GET /items: Found all the TodoItems")
+        _     <- log.info(s"GET /tags: Found all the Tags")
       } yield Ok(items)
     }
 
   val insert: Endpoint[Int] =
-    post("items" :: jsonBody[TodoItem]) { item: TodoItem =>
+    post("tags" :: jsonBody[Tag]) { item: Tag =>
       for {
-        _ <- log.debug("Trying to insert a TodoItem")
+        _ <- log.debug("Trying to insert a Tag")
         r <- repo.insert(item)
-        _ <- log.info(s"POST /items with $item: Tried to add TodoItem")
+        _ <- log.info(s"POST /tags with $item: Tried to add Tag")
       } yield Ok(r)
     }
 
   val update: Endpoint[Int] =
-    put("items" :: int :: jsonBody[TodoItem]) { (id: Int, item: TodoItem) =>
+    put("tags" :: int :: jsonBody[Tag]) { (id: Int, item: Tag) =>
       for {
-        _ <- log.debug("Trying to update a TodoItem")
+        _ <- log.debug("Trying to update a Tag")
         r <- repo.update(item.copy(id = Some(id)))
-        _ <- log.info(s"PUT /items/$id with $item: Tried to update TodoItem")
+        _ <- log.info(s"PUT /tags/$id with $item: Tried to update Tag")
       } yield Ok(r)
     }
 
   val destroy: Endpoint[Int] =
-    delete("items" :: int) { id: Int =>
+    delete("tags" :: int) { id: Int =>
       for {
-        _ <- log.debug("Trying to delete a TodoItem")
+        _ <- log.debug("Trying to delete a Tag")
         r <- repo.delete(id)
-        _ <- log.info("DELETE /items/$id: Tried to delete TodoItem")
+        _ <- log.info("DELETE /tags/$id: Tried to delete Tag")
       } yield Ok(r)
     }
 
   val endpoints = reset :+: retrieve :+: list :+: insert :+: update :+: destroy
 }
 
-object TodoItemApi {
+object TagApi {
   implicit def instance[F[_]](
-      implicit repo: TodoItemRepository[F],
+      implicit repo: TagRepository[F],
       log: LoggingM[F],
-      handler: F ~> Future): TodoItemApi[F] =
-    new TodoItemApi[F]
+      handler: F ~> Future): TagApi[F] =
+    new TagApi[F]
 }

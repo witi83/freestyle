@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-package todo
-package definitions
-package models
+package todo.definitions.models
 
-case class TodoItem(item: String, todoListId: Int, id: Option[Int] = None)
+case class TodoList(title: String, id: Option[Int] = None)

@@ -23,6 +23,8 @@ import doobie.imports._
 import fs2.Task
 import fs2.interop.cats._
 import todo.definitions.persistence.{H2TodoItemRepositoryHandler, TodoItemRepository}
+import todo.definitions.persistence.{H2TodoListRepositoryHandler, TodoListRepository}
+import todo.definitions.persistence.{H2TagRepositoryHandler, TagRepository}
 import todo.definitions.TodoApp
 
 import freestyle.implicits._
@@ -43,8 +45,14 @@ object implicits {
     ""
   )
 
-  implicit val todoRepositoryHandler: TodoItemRepository.Handler[ConnectionIO] =
+  implicit val todoItemRepositoryHandler: TodoItemRepository.Handler[ConnectionIO] =
     new H2TodoItemRepositoryHandler
+
+  implicit val todoListRepositoryHandler: TodoListRepository.Handler[ConnectionIO] =
+    new H2TodoListRepositoryHandler
+
+  implicit val tagRepositoryHandler: TagRepository.Handler[ConnectionIO] =
+    new H2TagRepositoryHandler
 
   implicit val connectionIO2Task: ConnectionIO ~> Task =
     λ[ConnectionIO ~> Task](_.transact(xa))
@@ -57,8 +65,14 @@ object implicits {
     }
   }
 
-  implicit val todoRepoTaskHandler: TodoItemRepository.Op ~> Task =
-    todoRepositoryHandler andThen connectionIO2Task
+  implicit val todoItemRepoTaskHandler: TodoItemRepository.Op ~> Task =
+    todoItemRepositoryHandler andThen connectionIO2Task
+
+  implicit val todoListRepoTaskHandler: TodoListRepository.Op ~> Task =
+    todoListRepositoryHandler andThen connectionIO2Task
+
+  implicit val tagRepoTaskHandler: TagRepository.Op ~> Task =
+    tagRepositoryHandler andThen connectionIO2Task
 
   implicit val futureHandler: TodoApp.Op ~> Future =
     implicitly[TodoApp.Op ~> Task] andThen task2Future

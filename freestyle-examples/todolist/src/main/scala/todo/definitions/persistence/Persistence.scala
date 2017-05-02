@@ -24,5 +24,7 @@ import freestyle.doobie._
 @module
 trait Persistence {
   val todoItemRepository: TodoItemRepository
+  val todoListRepository: TodoListRepository
+  val tagRepository: TagRepository
   val doobieM: DoobieM
 }
