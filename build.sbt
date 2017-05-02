@@ -1,5 +1,3 @@
-import sbtorgpolicies.model._
-
 lazy val root = (project in file("."))
   .settings(moduleName := "root")
   .settings(name := "freestyle")
@@ -11,6 +9,7 @@ lazy val freestyle = (crossProject in file("freestyle"))
   .settings(libraryDependencies ++= Seq(%("scala-reflect", scalaVersion.value)))
   .crossDepSettings(
     commonDeps ++ Seq(
+      %("iota-core"),
       %("cats-free"),
       %("shapeless"),
       %("monix-eval") % "test",
@@ -267,7 +266,7 @@ lazy val httpPlay = (project in file("http/play"))
   .dependsOn(freestyleJVM)
   .settings(name := "freestyle-http-play")
   .settings(
-    parallelExecution in Test := false,
+    concurrentRestrictions in Global := Seq(Tags.limitAll(1)),
     libraryDependencies ++= Seq(
       %%("play")      % "test",
       %%("play-test") % "test"

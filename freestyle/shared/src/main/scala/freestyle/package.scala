@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import cats.free.{Free, FreeApplicative, Inject}
+import cats.free.{Free, FreeApplicative}
 import cats.{~>, Applicative, Monad}
 import annotation.implicitNotFound
 
@@ -60,7 +60,7 @@ package object freestyle {
     def liftPar[F[_], A](freeap: FreeS.Par[F, A]): FreeS[F, A] =
       Free.liftF(freeap)
 
-    def inject[F[_], G[_]](implicit I: Inject[F, G]): F ~> FreeS.Par[G, ?] =
+    def inject[F[_], G[_]](implicit I: InjK[F, G]): F ~> FreeS.Par[G, ?] =
       λ[F ~> FreeS.Par[G, ?]](fa => FreeApplicative.lift(I.inj(fa) ) )
 
     /**
@@ -69,19 +69,6 @@ package object freestyle {
     def pure[F[_], A](a: A): FreeS[F, A] =
       liftPar(FreeApplicative.pure(a))
 
-  }
-
-  /**
-    * Syntax functions for Free
-    */
-  implicit class FreeOps[F[_], A](private val fa: Free[F, A]) extends AnyVal {
-
-    /**
-      * Runs a seq/par program by converting each parallel fragment in `f` into an `H`
-      * `H` should probably be an `IO`/`Task` like `Monad` also providing parallel execution.
-      */
-    def exec[H[_]: Monad](implicit interpreter: FSHandler[F, H]): H[A] =
-      fa.foldMap(interpreter)
   }
 
   /**
