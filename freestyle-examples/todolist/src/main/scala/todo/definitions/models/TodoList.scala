@@ -16,4 +16,4 @@
 
 package todo.definitions.models
 
-case class TodoList(title: String, id: Option[Int] = None)
+case class TodoList(title: String, tagId: Option[Int], id: Option[Int] = None)

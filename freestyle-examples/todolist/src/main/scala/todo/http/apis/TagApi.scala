@@ -33,13 +33,16 @@ import todo.definitions.persistence._
 import todo.runtime.implicits._
 
 class TagApi[F[_]](implicit repo: TagRepository[F], log: LoggingM[F], handler: F ~> Future) {
+  val resetProgram: FreeS[F, Int] =
+    for {
+      _ <- log.debug("Trying to reset Tag in repository")
+      r <- repo.init
+      _ <- log.warn("POST /tags/reset: Initialize the Tag table")
+    } yield r
+
   val reset: Endpoint[Int] =
     post("tags" :: "reset") {
-      for {
-        _ <- log.debug("Trying to reset Tag in repository")
-        r <- repo.init
-        _ <- log.warn("POST /tags/reset: Initialize the Tag table")
-      } yield Ok(r)
+      resetProgram.map(Ok(_))
     }
 
   val retrieve: Endpoint[Tag] =

@@ -36,13 +36,16 @@ class TodoItemApi[F[_]](
     implicit repo: TodoItemRepository[F],
     log: LoggingM[F],
     handler: F ~> Future) {
+  val resetProgram: FreeS[F, Int] =
+    for {
+      _ <- log.debug("Trying to reset TodoItem in repository")
+      r <- repo.init
+      _ <- log.warn("POST /items/reset: Initialize the TodoItem table")
+    } yield r
+
   val reset: Endpoint[Int] =
     post("items" :: "reset") {
-      for {
-        _ <- log.debug("Trying to reset TodoItem in repository")
-        r <- repo.init
-        _ <- log.warn("POST /items/reset: Initialize the TodoItem table")
-      } yield Ok(r)
+      resetProgram.map(Ok(_))
     }
 
   val retrieve: Endpoint[TodoItem] =

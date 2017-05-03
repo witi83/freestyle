@@ -42,7 +42,7 @@ class H2TodoListRepositoryHandler extends TodoListRepository.Handler[ConnectionI
   val drop = sql"""DROP TABLE todo_lists IF EXISTS""".update.run
 
   val create =
-    sql"""CREATE TABLE todo_lists (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR)""".update.run
+    sql"""CREATE TABLE todo_lists (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR, tag_id INT, FOREIGN KEY (tag_id) REFERENCES TAGS(id))""".update.run
 
   def get(id: Int) =
     sql"""SELECT title, id FROM todo_lists WHERE id = $id"""

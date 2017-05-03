@@ -18,4 +18,8 @@ package todo
 package definitions
 package models
 
-case class TodoItem(item: String, todoListId: Int, id: Option[Int] = None)
+case class TodoItem(
+    item: String,
+    todoListId: Int,
+    completed: Boolean = false,
+    id: Option[Int] = None)

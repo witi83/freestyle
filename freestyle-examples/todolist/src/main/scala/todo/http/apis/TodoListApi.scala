@@ -36,13 +36,16 @@ class TodoListApi[F[_]](
     implicit repo: TodoListRepository[F],
     log: LoggingM[F],
     handler: F ~> Future) {
+  val resetProgram =
+    for {
+      _ <- log.debug("Trying to reset TodoList in repository")
+      r <- repo.init
+      _ <- log.warn("POST /lists/reset: Initialize the TodoList table")
+    } yield r
+
   val reset: Endpoint[Int] =
     post("lists" :: "reset") {
-      for {
-        _ <- log.debug("Trying to reset TodoList in repository")
-        r <- repo.init
-        _ <- log.warn("POST /lists/reset: Initialize the TodoList table")
-      } yield Ok(r)
+      resetProgram.map(Ok(_))
     }
 
   val retrieve: Endpoint[TodoList] =

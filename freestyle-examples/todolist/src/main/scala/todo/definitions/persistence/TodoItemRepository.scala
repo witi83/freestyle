@@ -42,7 +42,7 @@ class H2TodoItemRepositoryHandler extends TodoItemRepository.Handler[ConnectionI
   val drop = sql"""DROP TABLE todo_items IF EXISTS""".update.run
 
   val create =
-    sql"""CREATE TABLE todo_items (id INT AUTO_INCREMENT PRIMARY KEY, item VARCHAR, todo_list_id INT NOT NULL, FOREIGN KEY (todo_list_id) references todo_lists(id))""".update.run
+    sql"""CREATE TABLE todo_items (id INT AUTO_INCREMENT PRIMARY KEY, item VARCHAR, todo_list_id INT NOT NULL, completed BOOLEAN NOT NULL, FOREIGN KEY (todo_list_id) REFERENCES todo_lists(id))""".update.run
 
   def get(id: Int) =
     sql"""SELECT item, id FROM todo_items WHERE id = $id"""
