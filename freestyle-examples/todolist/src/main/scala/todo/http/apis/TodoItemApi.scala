@@ -19,6 +19,8 @@ package http
 package apis
 
 import cats.~>
+import cats.instances.list._
+import cats.syntax.traverse._
 import com.twitter.util.Future
 import io.finch._
 import io.finch.circe._
@@ -27,8 +29,7 @@ import freestyle._
 import freestyle.implicits._
 import freestyle.http.finch._
 import freestyle.logging._
-
-import todo.definitions.models.TodoItem
+import todo.definitions.models.{TodoItem, TodoList}
 import todo.definitions.persistence._
 import todo.runtime.implicits._
 
@@ -67,6 +68,12 @@ class TodoItemApi[F[_]](
       _ <- log.debug(s"Trying to insert a $model")
       r <- repo.insert(item)
       _ <- log.info(s"POST /$prefix with $item: Tried to add $model")
+    } yield r
+
+  def insertBatchProgam(items: List[A], list: TodoList): FreeS[F, List[Option[A]]] =
+    for {
+      _ <- log.debug(s"Trying to insert batch $model")
+      r <- items.map(i => repo.insert(i.copy(todoListId = list.id))).sequence
     } yield r
 
   def updateProgram(id: Int, item: A): FreeS[F, Option[A]] =

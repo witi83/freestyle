@@ -19,6 +19,9 @@ package http
 package apis
 
 import cats.~>
+import cats.instances.list._
+import cats.instances.option._
+import cats.syntax.traverse._
 import com.twitter.util.Future
 import io.finch._
 import io.finch.circe._
@@ -27,6 +30,7 @@ import freestyle._
 import freestyle.implicits._
 import freestyle.http.finch._
 import freestyle.logging._
+import todo.definitions.models._
 import todo.runtime.implicits._
 
 class AppApi[F[_]](
@@ -44,7 +48,18 @@ class AppApi[F[_]](
       } yield Ok(tags + lists + items)
     }
 
-  val endpoints = reset
+  val create: Endpoint[TodoForm] =
+    post("create" :: jsonBody[TodoForm]) { form: TodoForm =>
+      for {
+        list <- todoListApi.insertProgram(form.list)                // Option[TodoList]
+        i    <- todoItemApi.insertBatchProgam(form.items, list.get) // List[Option[TodoItem]]
+        items = i.sequence // Option[List[TodoItem]]
+//        tag <- form.tag.map(tagApi.insertProgram(_))
+      } yield Ok(form.copy(list = list getOrElse form.list, items = items getOrElse form.items))
+
+    }
+
+  val endpoints = reset :+: create
 }
 
 object AppApi {
