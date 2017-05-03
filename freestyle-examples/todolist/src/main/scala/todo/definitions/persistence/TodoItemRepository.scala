@@ -27,9 +27,9 @@ trait TodoItemRepository {
   def drop: FS[Int]
   def create: FS[Int]
   def get(id: Int): FS[Option[TodoItem]]
-  def insert(input: TodoItem): FS[Int]
+  def insert(input: TodoItem): FS[Option[TodoItem]]
   def list: FS[List[TodoItem]]
-  def update(input: TodoItem): FS[Int]
+  def update(input: TodoItem): FS[Option[TodoItem]]
   def delete(id: Int): FS[Int]
   def init: FS.Seq[Int] =
     for {
@@ -39,26 +39,35 @@ trait TodoItemRepository {
 }
 
 class H2TodoItemRepositoryHandler extends TodoItemRepository.Handler[ConnectionIO] {
-  val drop = sql"""DROP TABLE todo_items IF EXISTS""".update.run
+  val drop: ConnectionIO[Int] = sql"""DROP TABLE todo_items IF EXISTS""".update.run
 
-  val create =
+  val create: ConnectionIO[Int] =
     sql"""CREATE TABLE todo_items (id INT AUTO_INCREMENT PRIMARY KEY, item VARCHAR, todo_list_id INT NOT NULL, completed BOOLEAN NOT NULL, FOREIGN KEY (todo_list_id) REFERENCES todo_lists(id))""".update.run
 
-  def get(id: Int) =
-    sql"""SELECT item, id FROM todo_items WHERE id = $id"""
+  def get(id: Int): ConnectionIO[Option[TodoItem]] =
+    sql"""SELECT item, todo_list_id, completed, id FROM todo_items WHERE id = $id"""
       .query[TodoItem]
       .option
 
-  def insert(input: TodoItem) =
-    sql"""INSERT INTO todo_items (item) VALUES (${input.item})""".update.run
+  def insert(input: TodoItem): ConnectionIO[Option[TodoItem]] =
+    for {
+      id <- sql"""INSERT INTO todo_items (item, todo_list_id, completed) VALUES (${input.item}, ${input.todoListId}, ${input.completed})""".update
+        .withUniqueGeneratedKeys[Int]("id")
+      item <- get(id)
+    } yield item
 
-  def list =
-    sql"""SELECT item, id FROM todo_items ORDER BY id ASC"""
+  def list: ConnectionIO[List[TodoItem]] =
+    sql"""SELECT item, todo_list_id, completed, id FROM todo_items ORDER BY id ASC"""
       .query[TodoItem]
       .list
 
-  def update(input: TodoItem) =
-    sql"""UPDATE todo_items SET item = ${input.item} WHERE id = ${input.id}""".update.run
+  def update(input: TodoItem): ConnectionIO[Option[TodoItem]] =
+    for {
+      id <- sql"""UPDATE todo_items SET item = ${input.item}, todo_list_id = ${input.todoListId}, completed = ${input.completed} WHERE id = ${input.id}""".update
+        .withUniqueGeneratedKeys[Int]("id")
+      item <- get(id)
+    } yield item
 
-  def delete(id: Int) = sql"""DELETE FROM todo_items WHERE id = $id""".update.run
+  def delete(id: Int): ConnectionIO[Int] =
+    sql"""DELETE FROM todo_items WHERE id = $id""".update.run
 }

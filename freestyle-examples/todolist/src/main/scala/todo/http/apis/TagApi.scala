@@ -59,14 +59,14 @@ class TagApi[F[_]](implicit repo: TagRepository[F], log: LoggingM[F], handler: F
       _     <- log.info(s"GET /$prefix: Found all the $model models")
     } yield items
 
-  def insertProgram(item: A): FreeS[F, Int] =
+  def insertProgram(item: A): FreeS[F, Option[A]] =
     for {
       _ <- log.debug(s"Trying to insert a $model")
       r <- repo.insert(item)
       _ <- log.info(s"POST /$prefix with $item: Tried to add $model")
     } yield r
 
-  def updateProgram(id: Int, item: A): FreeS[F, Int] =
+  def updateProgram(id: Int, item: A): FreeS[F, Option[A]] =
     for {
       _ <- log.debug(s"Trying to update a $model")
       r <- repo.update(item.copy(id = Some(id)))
@@ -96,12 +96,12 @@ class TagApi[F[_]](implicit repo: TagRepository[F], log: LoggingM[F], handler: F
       listProgram.map(Ok(_))
     }
 
-  val insert: Endpoint[Int] =
+  val insert: Endpoint[Option[A]] =
     post(prefix :: jsonBody[A]) { item: A =>
       insertProgram(item).map(Ok(_))
     }
 
-  val update: Endpoint[Int] =
+  val update: Endpoint[Option[A]] =
     put(prefix :: int :: jsonBody[A]) { (id: Int, item: A) =>
       updateProgram(id, item).map(Ok(_))
     }

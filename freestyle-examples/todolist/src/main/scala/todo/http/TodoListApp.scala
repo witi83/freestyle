@@ -64,7 +64,7 @@ object TodoListApp extends TwitterServer {
     } yield s"$host:$port"
 
   def main(): Unit = {
-    val address = getAddress[TodoApp.Op].exec[Task].unsafeRun()
+    val address = getAddress[TodoApp.Op].interpret[Task].unsafeRun()
 
     val server = Http.server.withAdmissionControl
       .concurrencyLimit(maxConcurrentRequests = 10, maxWaiters = 10)

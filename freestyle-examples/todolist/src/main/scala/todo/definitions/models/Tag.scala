@@ -18,4 +18,4 @@ package todo
 package definitions
 package models
 
-case class Tag(name: String, id: Option[Int])
+case class Tag(name: String, id: Option[Int] = None)

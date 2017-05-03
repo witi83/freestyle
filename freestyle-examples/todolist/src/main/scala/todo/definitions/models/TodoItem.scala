@@ -20,6 +20,6 @@ package models
 
 case class TodoItem(
     item: String,
-    todoListId: Int,
+    todoListId: Option[Int] = None,
     completed: Boolean = false,
     id: Option[Int] = None)

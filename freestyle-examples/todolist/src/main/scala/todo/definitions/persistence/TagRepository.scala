@@ -27,9 +27,9 @@ trait TagRepository {
   def drop: FS[Int]
   def create: FS[Int]
   def get(id: Int): FS[Option[Tag]]
-  def insert(input: Tag): FS[Int]
+  def insert(input: Tag): FS[Option[Tag]]
   def list: FS[List[Tag]]
-  def update(input: Tag): FS[Int]
+  def update(input: Tag): FS[Option[Tag]]
   def delete(id: Int): FS[Int]
   def init: FS.Seq[Int] =
     for {
@@ -39,26 +39,34 @@ trait TagRepository {
 }
 
 class H2TagRepositoryHandler extends TagRepository.Handler[ConnectionIO] {
-  val drop = sql"""DROP TABLE tags IF EXISTS""".update.run
+  val drop: ConnectionIO[Int] = sql"""DROP TABLE tags IF EXISTS""".update.run
 
-  val create =
+  val create: ConnectionIO[Int] =
     sql"""CREATE TABLE tags (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR)""".update.run
 
-  def get(id: Int) =
+  def get(id: Int): ConnectionIO[Option[Tag]] =
     sql"""SELECT name, id FROM tags WHERE id = $id"""
       .query[Tag]
       .option
 
-  def insert(input: Tag) =
-    sql"""INSERT INTO tags (name) VALUES (${input.name})""".update.run
+  def insert(input: Tag): ConnectionIO[Option[Tag]] =
+    for {
+      id <- sql"""INSERT INTO tags (name) VALUES (${input.name})""".update
+        .withUniqueGeneratedKeys[Int]("id")
+      item <- get(id)
+    } yield item
 
-  def list =
+  def list: ConnectionIO[List[Tag]] =
     sql"""SELECT name, id FROM tags ORDER BY id ASC"""
       .query[Tag]
       .list
 
-  def update(input: Tag) =
-    sql"""UPDATE tags SET name = ${input.name} WHERE id = ${input.id}""".update.run
+  def update(input: Tag): ConnectionIO[Option[Tag]] =
+    for {
+      id <- sql"""UPDATE tags SET name = ${input.name} WHERE id = ${input.id}""".update
+        .withUniqueGeneratedKeys[Int]("id")
+      item <- get(id)
+    } yield item
 
-  def delete(id: Int) = sql"""DELETE FROM tags WHERE id = $id""".update.run
+  def delete(id: Int): ConnectionIO[Int] = sql"""DELETE FROM tags WHERE id = $id""".update.run
 }

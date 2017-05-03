@@ -27,9 +27,9 @@ trait TodoListRepository {
   def drop: FS[Int]
   def create: FS[Int]
   def get(id: Int): FS[Option[TodoList]]
-  def insert(input: TodoList): FS[Int]
+  def insert(input: TodoList): FS[Option[TodoList]]
   def list: FS[List[TodoList]]
-  def update(input: TodoList): FS[Int]
+  def update(input: TodoList): FS[Option[TodoList]]
   def delete(id: Int): FS[Int]
   def init: FS.Seq[Int] =
     for {
@@ -39,26 +39,35 @@ trait TodoListRepository {
 }
 
 class H2TodoListRepositoryHandler extends TodoListRepository.Handler[ConnectionIO] {
-  val drop = sql"""DROP TABLE todo_lists IF EXISTS""".update.run
+  val drop: ConnectionIO[Int] = sql"""DROP TABLE todo_lists IF EXISTS""".update.run
 
-  val create =
+  val create: ConnectionIO[Int] =
     sql"""CREATE TABLE todo_lists (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR, tag_id INT, FOREIGN KEY (tag_id) REFERENCES TAGS(id))""".update.run
 
-  def get(id: Int) =
-    sql"""SELECT title, id FROM todo_lists WHERE id = $id"""
+  def get(id: Int): ConnectionIO[Option[TodoList]] =
+    sql"""SELECT title, tag_id, id FROM todo_lists WHERE id = $id"""
       .query[TodoList]
       .option
 
-  def insert(input: TodoList) =
-    sql"""INSERT INTO todo_lists (title) VALUES (${input.title})""".update.run
+  def insert(input: TodoList): ConnectionIO[Option[TodoList]] =
+    for {
+      id <- sql"""INSERT INTO todo_lists (title, tag_id) VALUES (${input.title}, ${input.tagId})""".update
+        .withUniqueGeneratedKeys[Int]("id")
+      item <- get(id)
+    } yield item
 
-  def list =
-    sql"""SELECT title, id FROM todo_lists ORDER BY id ASC"""
+  def list: ConnectionIO[List[TodoList]] =
+    sql"""SELECT title, tag_id, id FROM todo_lists ORDER BY id ASC"""
       .query[TodoList]
       .list
 
-  def update(input: TodoList) =
-    sql"""UPDATE todo_lists SET title = ${input.title} WHERE id = ${input.id}""".update.run
+  def update(input: TodoList): ConnectionIO[Option[TodoList]] =
+    for {
+      id <- sql"""UPDATE todo_lists SET title = ${input.title}, tag_id = ${input.tagId} WHERE id = ${input.id}""".update
+        .withUniqueGeneratedKeys[Int]("id")
+      item <- get(id)
+    } yield item
 
-  def delete(id: Int) = sql"""DELETE FROM todo_lists WHERE id = $id""".update.run
+  def delete(id: Int): ConnectionIO[Int] =
+    sql"""DELETE FROM todo_lists WHERE id = $id""".update.run
 }
