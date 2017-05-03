@@ -33,61 +33,82 @@ import todo.definitions.persistence._
 import todo.runtime.implicits._
 
 class TagApi[F[_]](implicit repo: TagRepository[F], log: LoggingM[F], handler: F ~> Future) {
+  val prefix = "tags"
+  val model  = "Tag"
+
+  type A = Tag
+
   val resetProgram: FreeS[F, Int] =
     for {
-      _ <- log.debug("Trying to reset Tag in repository")
+      _ <- log.debug(s"Trying to reset $model in repository")
       r <- repo.init
-      _ <- log.warn("POST /tags/reset: Initialize the Tag table")
+      _ <- log.warn(s"POST /$prefix/reset: Initialize the $model table")
+    } yield r
+
+  def retrieveProgram(id: Int): FreeS[F, Option[A]] =
+    for {
+      _    <- log.debug(s"Trying to retrieve an $model")
+      item <- repo.get(id)
+      _    <- log.info(s"GET /$prefix/$id: Found $item")
+    } yield item
+
+  val listProgram: FreeS[F, List[A]] =
+    for {
+      _     <- log.debug(s"Trying to get all $model models")
+      items <- repo.list
+      _     <- log.info(s"GET /$prefix: Found all the $model models")
+    } yield items
+
+  def insertProgram(item: A): FreeS[F, Int] =
+    for {
+      _ <- log.debug(s"Trying to insert a $model")
+      r <- repo.insert(item)
+      _ <- log.info(s"POST /$prefix with $item: Tried to add $model")
+    } yield r
+
+  def updateProgram(id: Int, item: A): FreeS[F, Int] =
+    for {
+      _ <- log.debug(s"Trying to update a $model")
+      r <- repo.update(item.copy(id = Some(id)))
+      _ <- log.info(s"PUT /$prefix/$id with $item: Tried to update $model")
+    } yield r
+
+  def destroyProgram(id: Int): FreeS[F, Int] =
+    for {
+      _ <- log.debug(s"Trying to delete a $model")
+      r <- repo.delete(id)
+      _ <- log.info(s"DELETE /$prefix/$id: Tried to delete $model")
     } yield r
 
   val reset: Endpoint[Int] =
-    post("tags" :: "reset") {
+    post(prefix :: "reset") {
       resetProgram.map(Ok(_))
     }
 
-  val retrieve: Endpoint[Tag] =
-    get("tags" :: int) { id: Int =>
-      for {
-        _    <- log.debug("Trying to retrieve an Tag")
-        item <- repo.get(id)
-        _    <- log.info(s"GET /tags/$id: Found $item")
-      } yield item.fold[Output[Tag]](NotFound(new NoSuchElementException))(Ok(_))
+  val retrieve: Endpoint[A] =
+    get(prefix :: int) { id: Int =>
+      retrieveProgram(id) map (item =>
+        item.fold[Output[A]](NotFound((new NoSuchElementException)))(Ok(_)))
     }
 
-  val list: Endpoint[List[Tag]] =
-    get("tags") {
-      for {
-        _     <- log.debug("Trying to get all Tags")
-        items <- repo.list
-        _     <- log.info(s"GET /tags: Found all the Tags")
-      } yield Ok(items)
+  val list: Endpoint[List[A]] =
+    get(prefix) {
+      listProgram.map(Ok(_))
     }
 
   val insert: Endpoint[Int] =
-    post("tags" :: jsonBody[Tag]) { item: Tag =>
-      for {
-        _ <- log.debug("Trying to insert a Tag")
-        r <- repo.insert(item)
-        _ <- log.info(s"POST /tags with $item: Tried to add Tag")
-      } yield Ok(r)
+    post(prefix :: jsonBody[A]) { item: A =>
+      insertProgram(item).map(Ok(_))
     }
 
   val update: Endpoint[Int] =
-    put("tags" :: int :: jsonBody[Tag]) { (id: Int, item: Tag) =>
-      for {
-        _ <- log.debug("Trying to update a Tag")
-        r <- repo.update(item.copy(id = Some(id)))
-        _ <- log.info(s"PUT /tags/$id with $item: Tried to update Tag")
-      } yield Ok(r)
+    put(prefix :: int :: jsonBody[A]) { (id: Int, item: A) =>
+      updateProgram(id, item).map(Ok(_))
     }
 
   val destroy: Endpoint[Int] =
-    delete("tags" :: int) { id: Int =>
-      for {
-        _ <- log.debug("Trying to delete a Tag")
-        r <- repo.delete(id)
-        _ <- log.info("DELETE /tags/$id: Tried to delete Tag")
-      } yield Ok(r)
+    delete(prefix :: int) { id: Int =>
+      destroyProgram(id).map(Ok(_))
     }
 
   val endpoints = reset :+: retrieve :+: list :+: insert :+: update :+: destroy
