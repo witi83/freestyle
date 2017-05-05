@@ -21,10 +21,12 @@ import freestyle._
 import persistence.Persistence
 import freestyle.logging._
 import freestyle.config._
+import freestyle.effects.error._
 
 @module
 trait TodoApp {
   val persistence: Persistence
   val log: LoggingM
   val config: ConfigM
+  val error: ErrorM
 }

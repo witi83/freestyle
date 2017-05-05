@@ -45,6 +45,9 @@ import freestyle.loggingJVM.implicits._
 
 import freestyle.config._
 import freestyle.config.implicits._
+
+import freestyle.effects.error._
+import freestyle.effects.error.implicits._
 // I don't like this
 
 import todo.runtime.implicits._

@@ -30,6 +30,7 @@ import freestyle._
 import freestyle.implicits._
 import freestyle.http.finch._
 import freestyle.logging._
+import freestyle.effects.error._
 import todo.definitions.models._
 import todo.runtime.implicits._
 
@@ -38,6 +39,7 @@ class AppApi[F[_]](
     todoListApi: TodoListApi[F],
     tagApi: TagApi[F],
     log: LoggingM[F],
+    error: ErrorM[F],
     handler: F ~> Future) {
   val reset: Endpoint[Int] =
     post("reset") {
@@ -51,12 +53,15 @@ class AppApi[F[_]](
   val create: Endpoint[TodoForm] =
     post("create" :: jsonBody[TodoForm]) { form: TodoForm =>
       for {
-        list <- todoListApi.insertProgram(form.list)                // Option[TodoList]
-        i    <- todoItemApi.insertBatchProgam(form.items, list.get) // List[Option[TodoItem]]
-        items = i.sequence // Option[List[TodoItem]]
-//        tag <- form.tag.map(tagApi.insertProgram(_))
-      } yield Ok(form.copy(list = list getOrElse form.list, items = items getOrElse form.items))
+        tag <- tagApi.insertProgram(form.tag)
+        t   <- error.either[Tag](tag.toRight(new NoSuchElementException))
 
+        list <- todoListApi.insertProgram(form.list.copy(tagId = t.id))
+        l    <- error.either[TodoList](list.toRight(new NoSuchElementException))
+
+        i <- todoItemApi.insertBatchProgam(form.items, l)
+        items = i.sequence
+      } yield Ok(form.copy(list = l, tag = t, items = items getOrElse form.items))
     }
 
   val endpoints = reset :+: create
@@ -69,6 +74,7 @@ object AppApi {
       todoListApi: TodoListApi[F],
       tagApi: TagApi[F],
       log: LoggingM[F],
+      error: ErrorM[F],
       handler: F ~> Future): AppApi[F] =
     new AppApi[F]
 }

@@ -18,4 +18,5 @@ package todo
 package definitions
 package models
 
-case class TodoForm(list: TodoList, tag: Option[Tag], items: List[TodoItem])
+//case class TodoForm(list: TodoList, tag: Option[Tag], items: List[TodoItem])
+case class TodoForm(list: TodoList, tag: Tag, items: List[TodoItem])
