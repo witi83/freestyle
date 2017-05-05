@@ -19,6 +19,8 @@ package http
 package apis
 
 import cats.~>
+import cats.instances.list._
+import cats.syntax.traverse._
 import com.twitter.util.Future
 import io.finch._
 import io.finch.circe._
@@ -69,11 +71,11 @@ class TodoListApi[F[_]](
       _ <- log.info(s"POST /$prefix with $item: Tried to add $model")
     } yield r
 
-  def updateProgram(id: Int, item: A): FreeS[F, Option[A]] =
+  def updateProgram(item: A): FreeS[F, Option[A]] =
     for {
       _ <- log.debug(s"Trying to update a $model")
-      r <- repo.update(item.copy(id = Some(id)))
-      _ <- log.info(s"PUT /$prefix/$id with $item: Tried to update $model")
+      r <- repo.update(item)
+      _ <- log.info(s"PUT /$prefix/${item.id} with $item: Tried to update $model")
     } yield r
 
   def destroyProgram(id: Int): FreeS[F, Int] =
@@ -83,6 +85,24 @@ class TodoListApi[F[_]](
       _ <- log.info(s"DELETE /$prefix/$id: Tried to delete $model")
     } yield r
 
+  def insertBatchProgam(items: List[A]): FreeS[F, List[Option[A]]] =
+    for {
+      _ <- log.debug(s"Trying to insert batch $model")
+      r <- items.map(i => repo.insert(i)).sequence
+    } yield r
+
+  def updateBatchProgram(items: List[A]): FreeS[F, List[Option[A]]] =
+    for {
+      _ <- log.debug(s"Trying to insert batch $model")
+      r <- items.map(i => repo.update(i)).sequence
+    } yield r
+
+  def destroyBatchProgam(ids: List[Int]): FreeS[F, Int] =
+    for {
+      _ <- log.debug(s"Trying to destroy batch $model")
+      r <- ids.map(repo.delete(_)).sequence
+    } yield r.sum
+
   val reset: Endpoint[Int] =
     post(prefix :: "reset") {
       resetProgram.map(Ok(_))
@@ -91,7 +111,7 @@ class TodoListApi[F[_]](
   val retrieve: Endpoint[A] =
     get(prefix :: int) { id: Int =>
       retrieveProgram(id) map (item =>
-        item.fold[Output[A]](NotFound((new NoSuchElementException)))(Ok(_)))
+        item.fold[Output[A]](NotFound(new NoSuchElementException))(Ok(_)))
     }
 
   val list: Endpoint[List[A]] =
@@ -106,7 +126,7 @@ class TodoListApi[F[_]](
 
   val update: Endpoint[Option[A]] =
     put(prefix :: int :: jsonBody[A]) { (id: Int, item: A) =>
-      updateProgram(id, item).map(Ok(_))
+      updateProgram(item.copy(id = Some(id))).map(Ok(_))
     }
 
   val destroy: Endpoint[Int] =
