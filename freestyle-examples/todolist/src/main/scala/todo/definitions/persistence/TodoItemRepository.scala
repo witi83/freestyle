@@ -63,9 +63,8 @@ class H2TodoItemRepositoryHandler extends TodoItemRepository.Handler[ConnectionI
 
   def update(input: TodoItem): ConnectionIO[Option[TodoItem]] =
     for {
-      id <- sql"""UPDATE todo_items SET item = ${input.item}, todo_list_id = ${input.todoListId}, completed = ${input.completed} WHERE id = ${input.id}""".update
-        .withUniqueGeneratedKeys[Int]("id")
-      item <- get(id)
+      _ <- sql"""UPDATE todo_items SET item = ${input.item}, todo_list_id = ${input.todoListId}, completed = ${input.completed} WHERE id = ${input.id}""".update.run
+      item <- get(input.id.get)
     } yield item
 
   def delete(id: Int): ConnectionIO[Int] =
