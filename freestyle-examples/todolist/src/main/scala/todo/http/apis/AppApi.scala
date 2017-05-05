@@ -22,11 +22,12 @@ import cats.~>
 import cats.instances.list._
 import cats.instances.option._
 import cats.syntax.traverse._
+import cats.syntax.semigroup._
 import com.twitter.util.Future
 import io.finch._
 import io.finch.circe._
 import io.circe.generic.auto._
-import freestyle._
+import freestyle.{FreeS, _}
 import freestyle.implicits._
 import freestyle.http.finch._
 import freestyle.logging._
@@ -50,8 +51,13 @@ class AppApi[F[_]](
       } yield Ok(tags + lists + items)
     }
 
-  val create: Endpoint[TodoForm] =
-    post("create" :: jsonBody[TodoForm]) { form: TodoForm =>
+  val list: Endpoint[List[TodoForm]] =
+    get("list") {
+      Ok(Nil: List[TodoForm])
+    }
+
+  val insert: Endpoint[TodoForm] =
+    post("insert" :: jsonBody[TodoForm]) { form: TodoForm =>
       for {
         tag <- tagApi.insertProgram(form.tag)
         t   <- error.either[Tag](tag.toRight(new NoSuchElementException))
@@ -59,12 +65,44 @@ class AppApi[F[_]](
         list <- todoListApi.insertProgram(form.list.copy(tagId = t.id))
         l    <- error.either[TodoList](list.toRight(new NoSuchElementException))
 
-        i <- todoItemApi.insertBatchProgam(form.items, l)
+        i <- todoItemApi.insertBatchProgam(form.items.map(_.copy(todoListId = l.id)))
         items = i.sequence
       } yield Ok(form.copy(list = l, tag = t, items = items getOrElse form.items))
     }
 
-  val endpoints = reset :+: create
+  val update: Endpoint[TodoForm] =
+    put("update" :: jsonBody[TodoForm]) { form: TodoForm =>
+      for {
+        tag <- tagApi.updateProgram(form.tag)
+        t   <- error.either[Tag](tag.toRight(new NoSuchElementException))
+
+        list <- todoListApi.updateProgram(form.list.copy(tagId = t.id))
+        l    <- error.either[TodoList](list.toRight(new NoSuchElementException))
+
+        i <- todoItemApi.updateBatchProgram(form.items.map(_.copy(todoListId = l.id)))
+        items = i.sequence
+      } yield Ok(form.copy(list = l, tag = t, items = items getOrElse form.items))
+    }
+
+  val destroy: Endpoint[Int] =
+    delete("delete" :: jsonBody[TodoForm]) { form: TodoForm =>
+      val todoItemIds: Option[List[Int]] = form.items.map(_.id).sequence
+
+      val program: Option[List[FreeS[F, Int]]] = for {
+        items <- todoItemIds.map(todoItemApi.destroyBatchProgam(_))
+        list  <- form.list.id.map(todoListApi.destroyProgram(_))
+        tags  <- form.tag.id.map(tagApi.destroyProgram(_))
+      } yield List(items, list, tags)
+
+      program.fold[FreeS[F, Output[Int]]](
+        FreeS.pure[F, Output[Int]](BadRequest(new NoSuchElementException))) { x =>
+        x.sequenceU
+          .map(_.sum)
+          .map(Ok(_))
+      }
+    }
+
+  val endpoints = reset :+: list :+: insert :+: update :+: destroy
 }
 
 object AppApi {
