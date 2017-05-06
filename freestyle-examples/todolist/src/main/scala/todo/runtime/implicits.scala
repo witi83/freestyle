@@ -22,6 +22,7 @@ import com.twitter.util.{Future, Promise}
 import doobie.imports._
 import fs2.Task
 import fs2.interop.cats._
+import todo.definitions.persistence.{AppRepository, H2AppRepositoryHandler}
 import todo.definitions.persistence.{H2TodoItemRepositoryHandler, TodoItemRepository}
 import todo.definitions.persistence.{H2TodoListRepositoryHandler, TodoListRepository}
 import todo.definitions.persistence.{H2TagRepositoryHandler, TagRepository}
@@ -47,6 +48,9 @@ object implicits {
     ""
   )
 
+  implicit val appRepositoryHandler: AppRepository.Handler[ConnectionIO] =
+    new H2AppRepositoryHandler
+
   implicit val todoItemRepositoryHandler: TodoItemRepository.Handler[ConnectionIO] =
     new H2TodoItemRepositoryHandler
 
@@ -66,6 +70,9 @@ object implicits {
       promise
     }
   }
+
+  implicit val appRepoTaskHandler: AppRepository.Op ~> Task =
+    appRepositoryHandler andThen connectionIO2Task
 
   implicit val todoItemRepoTaskHandler: TodoItemRepository.Op ~> Task =
     todoItemRepositoryHandler andThen connectionIO2Task

@@ -33,10 +33,12 @@ import freestyle.http.finch._
 import freestyle.logging._
 import freestyle.effects.error._
 import todo.definitions.models._
+import todo.definitions.persistence.AppRepository
 import todo.runtime.implicits._
 
 class AppApi[F[_]](
-    implicit todoItemApi: TodoItemApi[F],
+    implicit repo: AppRepository[F],
+    todoItemApi: TodoItemApi[F],
     todoListApi: TodoListApi[F],
     tagApi: TagApi[F],
     log: LoggingM[F],
@@ -53,7 +55,16 @@ class AppApi[F[_]](
 
   val list: Endpoint[List[TodoForm]] =
     get("list") {
-      Ok(Nil: List[TodoForm])
+      val program: FreeS[F, List[(TodoList, Tag, TodoItem)]] = for {
+        l <- repo.list
+      } yield l
+
+      program
+        .map(_.groupBy(x => (x._1, x._2)).map {
+          case ((todoList, tag), list) =>
+            TodoForm(todoList, tag, list.map(_._3))
+        }.toList)
+        .map(Ok(_))
     }
 
   val insert: Endpoint[TodoForm] =
@@ -107,7 +118,8 @@ class AppApi[F[_]](
 
 object AppApi {
   implicit def instance[F[_]](
-      implicit genericApi: GenericApi[F],
+      implicit repo: AppRepository[F],
+      genericApi: GenericApi[F],
       todoItemApi: TodoItemApi[F],
       todoListApi: TodoListApi[F],
       tagApi: TagApi[F],

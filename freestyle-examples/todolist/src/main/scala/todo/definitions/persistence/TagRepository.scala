@@ -63,7 +63,7 @@ class H2TagRepositoryHandler extends TagRepository.Handler[ConnectionIO] {
 
   def update(input: Tag): ConnectionIO[Option[Tag]] =
     for {
-      _ <- sql"""UPDATE tags SET name = ${input.name} WHERE id = ${input.id}""".update.run
+      _    <- sql"""UPDATE tags SET name = ${input.name} WHERE id = ${input.id}""".update.run
       item <- get(input.id.get)
     } yield item
 

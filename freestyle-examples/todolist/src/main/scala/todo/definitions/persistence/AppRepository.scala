@@ -18,14 +18,18 @@ package todo
 package definitions
 package persistence
 
+import todo.definitions.models.{Tag, TodoForm, TodoItem, TodoList}
+import doobie.imports._
 import freestyle._
-import freestyle.doobie._
 
-@module
-trait Persistence {
-  val appRepository: AppRepository
-  val todoItemRepository: TodoItemRepository
-  val todoListRepository: TodoListRepository
-  val tagRepository: TagRepository
-  val doobieM: DoobieM
+@free
+trait AppRepository {
+  def list: FS[List[(TodoList, Tag, TodoItem)]]
+}
+
+class H2AppRepositoryHandler extends AppRepository.Handler[ConnectionIO] {
+  def list: ConnectionIO[List[(TodoList, Tag, TodoItem)]] =
+    sql"""SELECT lists.title, lists.tag_id, lists.id, tags.name, tags.id, items.item, items.todo_list_id, items.completed, items.id FROM todo_lists AS lists INNER JOIN tags ON lists.tag_id = tags.id INNER JOIN todo_items AS items ON lists.id = items.todo_list_id"""
+      .query[(TodoList, Tag, TodoItem)]
+      .list
 }
