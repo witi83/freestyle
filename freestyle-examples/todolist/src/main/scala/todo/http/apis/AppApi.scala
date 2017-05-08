@@ -27,7 +27,7 @@ import com.twitter.util.Future
 import io.finch._
 import io.finch.circe._
 import io.circe.generic.auto._
-import freestyle.{FreeS, _}
+import freestyle._
 import freestyle.implicits._
 import freestyle.http.finch._
 import freestyle.logging._
@@ -71,28 +71,32 @@ class AppApi[F[_]](
     post("insert" :: jsonBody[TodoForm]) { form: TodoForm =>
       for {
         tag <- tagApi.insertProgram(form.tag)
-        t   <- error.either[Tag](tag.toRight(new NoSuchElementException))
+        t   <- error.either[Tag](tag.toRight(new NoSuchElementException("Could not create Tag")))
 
         list <- todoListApi.insertProgram(form.list.copy(tagId = t.id))
-        l    <- error.either[TodoList](list.toRight(new NoSuchElementException))
+        l    <- error.either[TodoList](list.toRight(new NoSuchElementException("Could not create TodoList")))
 
         i <- todoItemApi.insertBatchProgam(form.items.map(_.copy(todoListId = l.id)))
         items = i.sequence
       } yield Ok(form.copy(list = l, tag = t, items = items getOrElse form.items))
+    } handle {
+      case nse: NoSuchElementException => InternalServerError(nse)
     }
 
   val update: Endpoint[TodoForm] =
     put("update" :: jsonBody[TodoForm]) { form: TodoForm =>
       for {
         tag <- tagApi.updateProgram(form.tag)
-        t   <- error.either[Tag](tag.toRight(new NoSuchElementException))
+        t   <- error.either[Tag](tag.toRight(new NoSuchElementException("Could not update Tag")))
 
         list <- todoListApi.updateProgram(form.list.copy(tagId = t.id))
-        l    <- error.either[TodoList](list.toRight(new NoSuchElementException))
+        l    <- error.either[TodoList](list.toRight(new NoSuchElementException("Could not update TodoList")))
 
         i <- todoItemApi.updateBatchProgram(form.items.map(_.copy(todoListId = l.id)))
         items = i.sequence
       } yield Ok(form.copy(list = l, tag = t, items = items getOrElse form.items))
+    } handle {
+      case nse: NoSuchElementException => InternalServerError(nse)
     }
 
   val destroy: Endpoint[Int] =
@@ -106,11 +110,13 @@ class AppApi[F[_]](
       } yield List(items, list, tags)
 
       program.fold[FreeS[F, Output[Int]]](
-        FreeS.pure[F, Output[Int]](BadRequest(new NoSuchElementException))) { x =>
+        FreeS.pure[F, Output[Int]](BadRequest(new NoSuchElementException("Could not delete")))) { x =>
         x.sequenceU
           .map(_.sum)
           .map(Ok(_))
       }
+    } handle {
+      case nse: NoSuchElementException => InternalServerError(nse)
     }
 
   val endpoints = reset :+: list :+: insert :+: update :+: destroy

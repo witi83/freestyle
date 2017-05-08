@@ -110,7 +110,9 @@ class TodoItemApi[F[_]](
   val retrieve: Endpoint[A] =
     get(prefix :: int) { id: Int =>
       retrieveProgram(id) map (item =>
-        item.fold[Output[A]](NotFound(new NoSuchElementException))(Ok(_)))
+        item.fold[Output[A]](NotFound(new NoSuchElementException(s"Could not find $model with $id")))(Ok(_)))
+    } handle {
+      case nse: NoSuchElementException => NotFound(nse)
     }
 
   val list: Endpoint[List[A]] =
